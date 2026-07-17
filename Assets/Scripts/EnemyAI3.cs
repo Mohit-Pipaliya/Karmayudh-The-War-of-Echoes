@@ -1,12 +1,10 @@
 using UnityEngine;
 using System.Collections;
 
-public enum EnemyState { Idle, Talking, PlayerTalking, Chasing, Attacking, Dead }
-
 [RequireComponent(typeof(CharacterController))]
 [RequireComponent(typeof(Animator))]
 [RequireComponent(typeof(AudioSource))]
-public class EnemyAI : MonoBehaviour
+public class EnemyAI3 : MonoBehaviour
 {
     [Header("Target & Arena")]
     public Transform player; 
@@ -47,9 +45,6 @@ public class EnemyAI : MonoBehaviour
         audioSource = GetComponent<AudioSource>();
 
         currentHealth = maxHealth;
-        
-        // Add the glowing soul effect automatically
-        gameObject.AddComponent<SoulEffect>();
         
         // Add AAA Voice Effect
         gameObject.AddComponent<AAAVoiceEffect>();
@@ -272,6 +267,7 @@ public class EnemyAI : MonoBehaviour
     {
         isAttackCoolingDown = true;
 
+        // Pehla Attack
         int attackChoice = Random.Range(0, 2); 
         
         if (attackChoice == 0)
@@ -286,6 +282,31 @@ public class EnemyAI : MonoBehaviour
             animator.SetInteger("AttackType", attackType);
             animator.SetTrigger("SwordAttack");
         }
+
+        // Ek extra attack (Combo)
+        yield return new WaitForSeconds(0.6f);
+
+        int attackChoice2 = Random.Range(0, 2); 
+        if (attackChoice2 == 0)
+        {
+            animator.SetInteger("AttackType", Random.Range(1, 3));
+            animator.SetTrigger("SlashAttack");
+        }
+        else
+        {
+            animator.SetInteger("AttackType", Random.Range(1, 4));
+            animator.SetTrigger("SwordAttack");
+        }
+
+        // Teesra Attack: Ek extra Sword Attack
+        yield return new WaitForSeconds(0.6f);
+        animator.SetInteger("AttackType", Random.Range(1, 4));
+        animator.SetTrigger("SwordAttack");
+
+        // Chautha Attack: Ek extra Slash Attack
+        yield return new WaitForSeconds(0.6f);
+        animator.SetInteger("AttackType", Random.Range(1, 3));
+        animator.SetTrigger("SlashAttack");
 
         yield return new WaitForSeconds(attackCooldown);
 

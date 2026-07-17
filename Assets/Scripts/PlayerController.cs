@@ -20,6 +20,8 @@ public class PlayerController : MonoBehaviour
 
     [Header("Audio")]
     public AudioSource playerAudio; 
+    [Tooltip("Add reply audios here. e.g., 0 = Soul Shivraj, 1 = Physical Shivraj")]
+    public AudioClip[] enemyReplies;
 
     private CharacterController controller;
     private Animator animator;
@@ -38,6 +40,9 @@ public class PlayerController : MonoBehaviour
 
     void Start()
     {
+        // Add AAA Voice Effect
+        gameObject.AddComponent<AAAVoiceEffect>();
+
         controller = GetComponent<CharacterController>();
         animator = GetComponent<Animator>();
         
