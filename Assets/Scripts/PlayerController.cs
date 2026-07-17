@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using System.Collections;
+using UnityEngine.UI;
 
 [RequireComponent(typeof(CharacterController))]
 [RequireComponent(typeof(Animator))]
@@ -18,6 +19,14 @@ public class PlayerController : MonoBehaviour
     public float attackLungeSpeed = 4.0f; 
     public float comboResetTime = 1.2f; 
 
+    [Header("Dodge Settings")]
+    public float dodgeSpeed = 15f;
+    public float dodgeDuration = 0.25f;
+    public float dodgeCooldown = 1f;
+    private bool isDodging = false;
+    public bool isInvincible = false;
+    private float lastDodgeTime = -10f;
+
     [Header("Audio")]
     public AudioSource playerAudio; 
     [Tooltip("Add reply audios here. e.g., 0 = Soul Shivraj, 1 = Physical Shivraj")]
@@ -31,15 +40,37 @@ public class PlayerController : MonoBehaviour
     private Vector3 moveDirection = Vector3.zero;
     private float verticalVelocity = 0f;
     private float currentLerpSpeed = 0f;
+    private Renderer[] renderers;
+
+    [Header("Health Settings")]
+    public float maxHealth = 100f;
+    public float currentHealth;
+    public Slider healthSlider;
+    private bool isDead = false;
+
+    [Header("Interaction Settings")]
+    public GameObject interactUI;
 
     public bool isFrozen = false; // Cinematic scene ke liye
-    private bool isAttacking = false;
+    public bool isAttacking = false;
     private int comboStep = 0;
     private int slashComboStep = 0;
     private float lastAttackTime = 0f;
 
     void Start()
     {
+        currentHealth = maxHealth;
+        if (healthSlider != null)
+        {
+            healthSlider.maxValue = maxHealth;
+            healthSlider.value = currentHealth;
+        }
+        
+        if (interactUI != null)
+        {
+            interactUI.SetActive(false);
+        }
+
         // Add AAA Voice Effect
         gameObject.AddComponent<AAAVoiceEffect>();
 
@@ -51,10 +82,14 @@ public class PlayerController : MonoBehaviour
             mainCameraTransform = Camera.main.transform;
             cameraFollowScript = Camera.main.GetComponent<CameraFollow>();
         }
+
+        renderers = GetComponentsInChildren<Renderer>();
     }
 
     void Update()
     {
+        if (isDead) return;
+
         HandleAttacks(); 
         HandleMovement();
     }
@@ -66,7 +101,7 @@ public class PlayerController : MonoBehaviour
         bool isRunning = false;
         bool jumpPressed = false;
 
-        if (Keyboard.current != null && !isAttacking && !isFrozen)
+        if (Keyboard.current != null && !isAttacking && !isFrozen && !isDodging)
         {
             if (Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed) horizontal -= 1f;
             if (Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed) horizontal += 1f;
@@ -105,8 +140,27 @@ public class PlayerController : MonoBehaviour
         
         currentLerpSpeed = Mathf.Lerp(currentLerpSpeed, targetSpeed, acceleration * Time.unscaledDeltaTime);
 
+        if (Mouse.current != null && Mouse.current.rightButton.wasPressedThisFrame && !isDodging && !isAttacking && !isFrozen && Time.time >= lastDodgeTime + dodgeCooldown)
+        {
+            StartCoroutine(DodgeRoutine(inputDirection));
+        }
+
+        if (isDodging)
+        {
+            // Stop other movement logic while dodging
+            return;
+        }
+
         if (isAttacking)
         {
+            // Rotate towards camera when attacking
+            if (mainCameraTransform != null)
+            {
+                float targetAngle = mainCameraTransform.eulerAngles.y;
+                Quaternion targetRotation = Quaternion.Euler(0f, targetAngle, 0f);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.unscaledDeltaTime);
+            }
+
             AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
             
             if (controller.isGrounded)
@@ -134,6 +188,14 @@ public class PlayerController : MonoBehaviour
         }
         else
         {
+            // Rotate towards camera when idle so it turns with the mouse
+            if (mainCameraTransform != null)
+            {
+                float targetAngle = mainCameraTransform.eulerAngles.y;
+                Quaternion targetRotation = Quaternion.Euler(0f, targetAngle, 0f);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotationSpeed * Time.unscaledDeltaTime);
+            }
+
             moveDirection.x = 0;
             moveDirection.z = 0;
             animator.SetFloat("Speed", 0.0f, 0.1f, Time.unscaledDeltaTime);
@@ -163,23 +225,22 @@ public class PlayerController : MonoBehaviour
     void HandleAttacks()
     {
         AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
-        bool currentlyPlayingAttack = stateInfo.IsTag("Attack");
-
-        if (currentlyPlayingAttack)
+        
+        // Timer based approach: If attacked within the last 1.2 seconds, consider it an active attack.
+        // This is 100% reliable even if Animator states have different names or no "Attack" tag.
+        if (Time.time - lastAttackTime < 1.2f)
         {
             isAttacking = true;
         }
         else
         {
             isAttacking = false;
-            // User request: memory store rakhna hai, combo timeout nahi hoga.
-            // Isliye timeout reset logic hata diya gaya hai.
         }
 
         if (Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame && !isFrozen)
         {
-            // Pehle wala attack agar 60% se jyada ho gaya ho, tabhi doosra attack input lega (Combo flow ke liye)
-            if (currentlyPlayingAttack && stateInfo.normalizedTime < 0.6f) return;
+            // Combo logic: Wait at least 0.4 seconds before allowing the next combo input
+            if (isAttacking && Time.time - lastAttackTime < 0.4f) return;
 
             bool isCtrlHeld = false;
             if (Keyboard.current != null)
@@ -240,10 +301,106 @@ public class PlayerController : MonoBehaviour
         animator.SetBool("IsTalking", talking);
     }
 
+    private IEnumerator DodgeRoutine(Vector3 direction)
+    {
+        isDodging = true;
+        isInvincible = true;
+        lastDodgeTime = Time.time;
+
+        if (direction.magnitude < 0.1f)
+        {
+            direction = -transform.forward;
+        }
+        else
+        {
+            direction = direction.normalized;
+        }
+
+        // Rotate towards dodge direction if we are not dodging backwards
+        if (direction != -transform.forward && direction.magnitude > 0.1f)
+        {
+            float targetAngle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
+            transform.rotation = Quaternion.Euler(0f, targetAngle, 0f);
+        }
+
+        float startTime = Time.time;
+        while (Time.time < startTime + dodgeDuration)
+        {
+            controller.Move(direction * dodgeSpeed * Time.unscaledDeltaTime);
+            yield return null;
+        }
+
+        isDodging = false;
+        isInvincible = false;
+    }
+
+    private IEnumerator DamageFlashRoutine()
+    {
+        MaterialPropertyBlock propBlock = new MaterialPropertyBlock();
+        propBlock.SetColor("_Color", Color.red);
+        propBlock.SetColor("_BaseColor", Color.red);
+
+        foreach (Renderer r in renderers)
+        {
+            if (r != null) r.SetPropertyBlock(propBlock);
+        }
+
+        yield return new WaitForSecondsRealtime(0.1f);
+
+        foreach (Renderer r in renderers)
+        {
+            if (r != null) r.SetPropertyBlock(null);
+        }
+    }
+
     public void TakeDamage(int damageAmount)
     {
-        animator.SetTrigger("TakeDamage");
-        StartCoroutine(CinematicSlowMo(0.05f, 0.2f));
-        if(cameraFollowScript != null) cameraFollowScript.TriggerShake(0.3f, 0.3f);
+        if (isDead || isInvincible) return;
+
+        // Apply the exact damage passed in (15 or 10)
+        currentHealth -= damageAmount;
+
+        if (healthSlider != null)
+        {
+            healthSlider.value = currentHealth;
+        }
+
+        if (currentHealth <= 0)
+        {
+            currentHealth = 0;
+            Die();
+        }
+        else
+        {
+            animator.SetTrigger("TakeDamage");
+            StartCoroutine(DamageFlashRoutine());
+            StartCoroutine(CinematicSlowMo(0.05f, 0.2f));
+            if(cameraFollowScript != null) cameraFollowScript.TriggerShake(0.3f, 0.3f);
+        }
+    }
+
+    private void Die()
+    {
+        isDead = true;
+        animator.SetTrigger("Die");
+    }
+
+    public void HealFull()
+    {
+        if (isDead) return;
+        
+        currentHealth = maxHealth;
+        if (healthSlider != null)
+        {
+            healthSlider.value = currentHealth;
+        }
+    }
+
+    public void ShowInteractUI(bool show)
+    {
+        if (interactUI != null)
+        {
+            interactUI.SetActive(show);
+        }
     }
 }

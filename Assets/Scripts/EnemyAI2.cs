@@ -37,6 +37,8 @@ public class EnemyAI2 : MonoBehaviour
     private float verticalVelocity = 0f;
     private bool isAttackCoolingDown = false;
     private GameObject activeLightningArena;
+    private EnemyHealthBar healthBar;
+    private Renderer[] renderers;
 
     void Start()
     {
@@ -48,6 +50,10 @@ public class EnemyAI2 : MonoBehaviour
         
         // Add AAA Voice Effect
         gameObject.AddComponent<AAAVoiceEffect>();
+        
+        // Add Health Bar (Red Glowing for Enemy 2)
+        healthBar = gameObject.AddComponent<EnemyHealthBar>();
+        healthBar.Initialize(new Color(2.5f, 0f, 0f, 1f)); // HDR Red
         
         if (arenaWalls != null)
             arenaWalls.SetActive(false); 
@@ -61,14 +67,19 @@ public class EnemyAI2 : MonoBehaviour
         {
             playerControllerScript = player.GetComponent<PlayerController>();
         }
+
+        renderers = GetComponentsInChildren<Renderer>();
     }
 
     void Update()
     {
+        if (controller != null && controller.enabled)
+        {
+            ApplyGravity();
+        }
+
         if (currentState == EnemyState.Dead)
             return; 
-
-        ApplyGravity();
 
         if (player == null) return;
 
@@ -137,7 +148,9 @@ public class EnemyAI2 : MonoBehaviour
 
             if (audioSource.clip != null)
             {
-                audioSource.pitch = 1.2f; // Speed up audio by 20%
+                audioSource.pitch = 1.4f; // Speed up audio more (40%)
+                audioSource.spatialBlend = 0f; // Make 2D so it's loud and clear
+                audioSource.volume = 1f;
                 audioSource.Play();
             }
             animator.SetBool("IsTalking", true); 
@@ -159,7 +172,9 @@ public class EnemyAI2 : MonoBehaviour
             if (playerControllerScript != null && playerControllerScript.playerAudio != null && playerDialogueClip != null)
             {
                 playerControllerScript.playerAudio.clip = playerDialogueClip;
-                playerControllerScript.playerAudio.pitch = 1.2f; // Speed up audio by 20%
+                playerControllerScript.playerAudio.pitch = 1.4f; // Speed up audio more (40%)
+                playerControllerScript.playerAudio.spatialBlend = 0f; // Make 2D to fix low volume issue
+                playerControllerScript.playerAudio.volume = 1f; // Max volume
                 playerControllerScript.playerAudio.Play();
                 
                 // Player ko bolne wali animation chalu karne ka ishara
@@ -309,7 +324,13 @@ public class EnemyAI2 : MonoBehaviour
 
         currentHealth -= damage;
         
+        if (healthBar != null)
+        {
+            healthBar.UpdateHealth(currentHealth, maxHealth);
+        }
+        
         StartCoroutine(HitPause());
+        StartCoroutine(DamageFlashRoutine());
 
         if (currentHealth <= 0)
         {
@@ -328,10 +349,34 @@ public class EnemyAI2 : MonoBehaviour
         animator.speed = 1f;
     }
 
+    private IEnumerator DamageFlashRoutine()
+    {
+        MaterialPropertyBlock propBlock = new MaterialPropertyBlock();
+        propBlock.SetColor("_Color", Color.red);
+        propBlock.SetColor("_BaseColor", Color.red);
+
+        foreach (Renderer r in renderers)
+        {
+            if (r != null) r.SetPropertyBlock(propBlock);
+        }
+
+        yield return new WaitForSecondsRealtime(0.1f);
+
+        foreach (Renderer r in renderers)
+        {
+            if (r != null) r.SetPropertyBlock(null);
+        }
+    }
+
     void Die()
     {
         currentState = EnemyState.Dead;
         animator.SetTrigger("Die"); 
+
+        if (healthBar != null)
+        {
+            healthBar.HideBar();
+        }
 
         if (arenaWalls != null)
             arenaWalls.SetActive(false);
@@ -341,7 +386,14 @@ public class EnemyAI2 : MonoBehaviour
             Destroy(activeLightningArena);
         }
             
-        controller.enabled = false;
+        StartCoroutine(DisableControllerAfterDeath());
+    }
+
+    IEnumerator DisableControllerAfterDeath()
+    {
+        yield return new WaitForSeconds(3f);
+        if (controller != null)
+            controller.enabled = false;
     }
 
     private void OnDrawGizmosSelected()
