@@ -132,12 +132,25 @@ public class EnemyAI2 : MonoBehaviour
         // Jaise hi player Cutscene Range me aayega, tab Cinematic aur Audio chalu hoga!
         if (distance <= cutsceneRange)
         {
+            if (WorldEnvironmentManager.Instance != null) WorldEnvironmentManager.Instance.AddBGMSuppression();
             currentState = EnemyState.Talking;
             
             // --- CUTSCENE SHURU ---
             if (playerControllerScript != null)
             {
                 playerControllerScript.isFrozen = true; // Player hil nahi payega
+            }
+            
+            // Dono ko ek dusre ke samne face karwao
+            if (player != null)
+            {
+                Vector3 lookDir = (transform.position - player.position).normalized;
+                lookDir.y = 0;
+                if (lookDir != Vector3.zero)
+                {
+                    player.rotation = Quaternion.LookRotation(lookDir);
+                    transform.rotation = Quaternion.LookRotation(-lookDir);
+                }
             }
             
             if (Camera.main != null)
@@ -168,6 +181,14 @@ public class EnemyAI2 : MonoBehaviour
             
             // Jab enemy chup ho jaye, toh player ki baari
             currentState = EnemyState.PlayerTalking;
+
+            // Player ko enemy ki taraf face karwao (Jab player reply dega)
+            Vector3 lookDir = (transform.position - player.position).normalized;
+            lookDir.y = 0;
+            if (lookDir != Vector3.zero)
+            {
+                player.rotation = Quaternion.LookRotation(lookDir);
+            }
 
             if (playerControllerScript != null && playerControllerScript.playerAudio != null && playerDialogueClip != null)
             {
@@ -223,13 +244,15 @@ public class EnemyAI2 : MonoBehaviour
         if (activeLightningArena == null)
         {
             activeLightningArena = new GameObject("LightningArena");
-            Vector3 center = (transform.position + player.position) / 2f;
+            // NAYA LOGIC: Arena ring ko exactly enemy ke trigger area (yellow circle) par banana hai
+            Vector3 center = transform.position; // Enemy ka center
             center.y = transform.position.y;
             activeLightningArena.transform.position = center;
             
             LightningArena arenaScript = activeLightningArena.AddComponent<LightningArena>();
-            float dist = Vector3.Distance(transform.position, player.position);
-            arenaScript.Initialize(Mathf.Max(dist, 12f));
+            
+            // Arena ka size triggerRange (15f) jitna set kar diya gaya hai
+            arenaScript.Initialize(triggerRange);
         }
     }
 

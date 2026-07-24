@@ -11,6 +11,9 @@ public class VFXManager : MonoBehaviour
         // Add a ParticleSystem
         ParticleSystem ps = vfxObject.AddComponent<ParticleSystem>();
         
+        // Stop the particle system before configuring duration to prevent Unity error
+        ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        
         // Configure Particle System Main Module
         var main = ps.main;
         main.duration = 0.5f;
@@ -51,6 +54,7 @@ public class VFXManager : MonoBehaviour
         collision.dampen = 0.5f;
 
         // Auto destroy after the effect is done
+        ps.Play();
         Destroy(vfxObject, 1.5f);
     }
 }

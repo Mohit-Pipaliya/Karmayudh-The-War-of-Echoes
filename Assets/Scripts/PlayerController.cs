@@ -88,10 +88,32 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
-        if (isDead) return;
+        if (isDead)
+        {
+            ApplyGravityOnly();
+            return;
+        }
 
         HandleAttacks(); 
         HandleMovement();
+    }
+
+    void ApplyGravityOnly()
+    {
+        if (controller != null && controller.enabled)
+        {
+            if (controller.isGrounded)
+            {
+                verticalVelocity = -2f; 
+                // Disable controller so the capsule collision doesn't keep the mesh floating
+                controller.enabled = false;
+            }
+            else
+            {
+                verticalVelocity -= gravity * Time.unscaledDeltaTime;
+                controller.Move(new Vector3(0, verticalVelocity * Time.unscaledDeltaTime, 0));
+            }
+        }
     }
 
     void HandleMovement()
@@ -189,7 +211,7 @@ public class PlayerController : MonoBehaviour
         else
         {
             // Rotate towards camera when idle so it turns with the mouse
-            if (mainCameraTransform != null)
+            if (mainCameraTransform != null && !isFrozen)
             {
                 float targetAngle = mainCameraTransform.eulerAngles.y;
                 Quaternion targetRotation = Quaternion.Euler(0f, targetAngle, 0f);
@@ -381,8 +403,26 @@ public class PlayerController : MonoBehaviour
 
     private void Die()
     {
+        if (isDead) return;
         isDead = true;
+        
         animator.SetTrigger("Die");
+        // Force the animation to play immediately to bypass Animator transition bugs
+        animator.Play("Die", 0, 0f);
+        
+        // Prevent falling through the floor if a Rigidbody was accidentally added
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.isKinematic = true;
+        }
+
+        // Shrink the capsule so the character drops and rests perfectly on the ground
+        if (controller != null)
+        {
+            controller.height = 0.2f;
+            controller.center = new Vector3(0, 0.1f, 0);
+        }
     }
 
     public void HealFull()
