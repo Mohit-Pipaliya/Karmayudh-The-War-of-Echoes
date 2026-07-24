@@ -292,7 +292,12 @@ public class PlayerController : MonoBehaviour
                 
                 if (playerAudio != null && jumpSound != null)
                 {
-                    playerAudio.PlayOneShot(jumpSound, 0.7f);
+                    Debug.Log("Playing Jump Sound");
+                    playerAudio.PlayOneShot(jumpSound, 1.0f);
+                }
+                else
+                {
+                    Debug.LogWarning("Jump sound not playing: playerAudio is " + (playerAudio == null ? "null" : "ok") + ", jumpSound is " + (jumpSound == null ? "null" : "ok"));
                 }
                 
                 if(cameraFollowScript != null) cameraFollowScript.TriggerShake(0.1f, 0.05f);
@@ -306,7 +311,12 @@ public class PlayerController : MonoBehaviour
                 {
                     if (playerAudio != null && footstepSounds != null && footstepSounds.Length > 0)
                     {
-                        playerAudio.PlayOneShot(footstepSounds[Random.Range(0, footstepSounds.Length)], 0.3f);
+                        Debug.Log("Playing Footstep Sound");
+                        playerAudio.PlayOneShot(footstepSounds[Random.Range(0, footstepSounds.Length)], 1.0f);
+                    }
+                    else
+                    {
+                        Debug.LogWarning("Footstep sound not playing: playerAudio=" + (playerAudio == null ? "null" : "ok") + ", footstepSounds length=" + (footstepSounds != null ? footstepSounds.Length.ToString() : "null"));
                     }
                     footstepTimer = isRunning ? 0.35f : 0.6f;
                 }
