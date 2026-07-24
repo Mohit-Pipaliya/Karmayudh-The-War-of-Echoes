@@ -57,6 +57,9 @@ public class EnemyAI : MonoBehaviour
         animator = GetComponent<Animator>();
         audioSource = GetComponent<AudioSource>();
 
+        // Check if sounds are assigned
+        if (footstepSounds == null || footstepSounds.Length == 0) Debug.LogError(gameObject.name + " FOOTSTEP SOUNDS ARE MISSING!");
+
         currentHealth = maxHealth;
         
         // Add the glowing soul effect automatically

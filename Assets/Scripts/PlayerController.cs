@@ -132,6 +132,11 @@ public class PlayerController : MonoBehaviour
                 playerAudio = gameObject.AddComponent<AudioSource>();
             }
         }
+
+        // Check if sounds are assigned
+        if (jumpSound == null) Debug.LogError("JUMP SOUND IS MISSING! Please run Tools -> Auto Assign All Audio");
+        if (footstepSounds == null || footstepSounds.Length == 0) Debug.LogError("FOOTSTEP SOUNDS ARE MISSING!");
+        if (attackSounds == null || attackSounds.Length == 0) Debug.LogError("ATTACK SOUNDS ARE MISSING!");
     }
 
     void Update()
@@ -290,10 +295,11 @@ public class PlayerController : MonoBehaviour
                 verticalVelocity = jumpSpeed;
                 animator.SetTrigger("Jump");
                 
-                if (playerAudio != null && jumpSound != null)
+                if (jumpSound != null)
                 {
-                    Debug.Log("Playing Jump Sound");
-                    playerAudio.PlayOneShot(jumpSound, 1.0f);
+                    Debug.Log("Playing Jump Sound (PlayClipAtPoint)");
+                    Vector3 playPos = mainCameraTransform != null ? mainCameraTransform.position : transform.position;
+                    AudioSource.PlayClipAtPoint(jumpSound, playPos, 1.0f);
                 }
                 else
                 {
@@ -304,15 +310,18 @@ public class PlayerController : MonoBehaviour
             }
             
             // Footsteps logic
-            if (moveDirection.magnitude > 0.1f && !isAttacking && !isDodging)
+            Vector3 horizontalMove = new Vector3(moveDirection.x, 0, moveDirection.z);
+            if (horizontalMove.magnitude > 0.1f && !isAttacking && !isDodging)
             {
                 footstepTimer -= Time.unscaledDeltaTime;
                 if (footstepTimer <= 0f)
                 {
-                    if (playerAudio != null && footstepSounds != null && footstepSounds.Length > 0)
+                    if (footstepSounds != null && footstepSounds.Length > 0)
                     {
-                        Debug.Log("Playing Footstep Sound");
-                        playerAudio.PlayOneShot(footstepSounds[Random.Range(0, footstepSounds.Length)], 1.0f);
+                        Debug.Log("Playing Footstep Sound (PlayClipAtPoint)");
+                        AudioClip stepClip = footstepSounds[Random.Range(0, footstepSounds.Length)];
+                        Vector3 playPos = mainCameraTransform != null ? mainCameraTransform.position : transform.position;
+                        AudioSource.PlayClipAtPoint(stepClip, playPos, 1.0f);
                     }
                     else
                     {

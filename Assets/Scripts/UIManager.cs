@@ -122,17 +122,21 @@ public class UIManager : MonoBehaviour
 
     public void ShowPanel(GameObject panelToShow)
     {
-        if (loadingPanel != null) loadingPanel.SetActive(false);
-        if (mainMenuPanel != null) mainMenuPanel.SetActive(false);
-        if (optionMenuPanel != null) optionMenuPanel.SetActive(false);
-        if (pauseMenuPanel != null) pauseMenuPanel.SetActive(false);
-        if (gameOverPanel != null) gameOverPanel.SetActive(false);
-        if (finishPanel != null) finishPanel.SetActive(false);
+        if (loadingPanel != null && panelToShow != loadingPanel) loadingPanel.SetActive(false);
+        if (mainMenuPanel != null && panelToShow != mainMenuPanel) mainMenuPanel.SetActive(false);
+        if (optionMenuPanel != null && panelToShow != optionMenuPanel) optionMenuPanel.SetActive(false);
+        if (pauseMenuPanel != null && panelToShow != pauseMenuPanel) pauseMenuPanel.SetActive(false);
+        if (gameOverPanel != null && panelToShow != gameOverPanel) gameOverPanel.SetActive(false);
+        if (finishPanel != null && panelToShow != finishPanel) finishPanel.SetActive(false);
         // We don't hide healthBarPanel here because it stays on during gameplay, handled separately
 
         if (panelToShow != null)
         {
             panelToShow.SetActive(true);
+            
+            // AAA UI Animation (Scale and Fade)
+            StartCoroutine(AnimatePanelIn(panelToShow));
+
             // Unlock cursor for UI interaction
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
@@ -143,6 +147,34 @@ public class UIManager : MonoBehaviour
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
         }
+    }
+
+    IEnumerator AnimatePanelIn(GameObject panel)
+    {
+        CanvasGroup cg = panel.GetComponent<CanvasGroup>();
+        if (cg == null) cg = panel.AddComponent<CanvasGroup>();
+
+        cg.alpha = 0f;
+        panel.transform.localScale = new Vector3(0.9f, 0.9f, 1f);
+
+        float duration = 0.25f;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = elapsed / duration;
+            // Smooth ease out
+            float easeOut = 1f - Mathf.Pow(1f - t, 3f);
+            
+            cg.alpha = easeOut;
+            float scale = Mathf.Lerp(0.9f, 1f, easeOut);
+            panel.transform.localScale = new Vector3(scale, scale, 1f);
+            yield return null;
+        }
+
+        cg.alpha = 1f;
+        panel.transform.localScale = Vector3.one;
     }
 
     // ================= MAIN MENU =================

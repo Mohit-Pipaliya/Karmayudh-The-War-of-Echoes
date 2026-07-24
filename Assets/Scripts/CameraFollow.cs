@@ -18,6 +18,18 @@ public class CameraFollow : MonoBehaviour
     private float shakeMagnitude = 0f;
     private float currentX = 0f;
 
+    [Header("AAA Camera Effects")]
+    public bool enableBreathing = true;
+    public float breathingSpeed = 1.5f;
+    public float breathingMagnitude = 0.05f;
+    public bool enableDynamicFOV = true;
+    public float baseFOV = 60f;
+    public float runFOV = 70f;
+    public float fovTransitionSpeed = 5f;
+
+    private Camera cam;
+    private PlayerController playerController;
+
     // Cinematic variables
     private bool isCinematic = false;
     private Transform cinematicEnemy;
@@ -27,6 +39,13 @@ public class CameraFollow : MonoBehaviour
 
     void Start()
     {
+        cam = GetComponent<Camera>();
+        if (cam != null) cam.fieldOfView = baseFOV;
+        
+        if (target != null)
+        {
+            playerController = target.GetComponent<PlayerController>();
+        }
         // Cursor lock logic is now handled by UIManager
     }
 
@@ -72,6 +91,31 @@ public class CameraFollow : MonoBehaviour
         {
             desiredPosition += Random.insideUnitSphere * shakeMagnitude;
             shakeDuration -= Time.unscaledDeltaTime; 
+        }
+
+        // AAA Breathing Effect
+        if (enableBreathing && shakeDuration <= 0)
+        {
+            float noiseX = (Mathf.PerlinNoise(Time.time * breathingSpeed, 0f) - 0.5f) * breathingMagnitude;
+            float noiseY = (Mathf.PerlinNoise(0f, Time.time * breathingSpeed) - 0.5f) * breathingMagnitude;
+            desiredPosition += rotation * new Vector3(noiseX, noiseY, 0f);
+        }
+
+        // AAA Dynamic FOV
+        if (enableDynamicFOV && cam != null)
+        {
+            float targetFOV = baseFOV;
+            if (playerController != null && Keyboard.current != null)
+            {
+                bool isRunning = Keyboard.current.leftShiftKey.isPressed || Keyboard.current.rightShiftKey.isPressed;
+                bool isMoving = Keyboard.current.wKey.isPressed || Keyboard.current.upArrowKey.isPressed ||
+                                Keyboard.current.aKey.isPressed || Keyboard.current.leftArrowKey.isPressed ||
+                                Keyboard.current.sKey.isPressed || Keyboard.current.downArrowKey.isPressed ||
+                                Keyboard.current.dKey.isPressed || Keyboard.current.rightArrowKey.isPressed;
+                
+                if (isRunning && isMoving) targetFOV = runFOV;
+            }
+            cam.fieldOfView = Mathf.Lerp(cam.fieldOfView, targetFOV, fovTransitionSpeed * Time.unscaledDeltaTime);
         }
 
         transform.position = desiredPosition;
