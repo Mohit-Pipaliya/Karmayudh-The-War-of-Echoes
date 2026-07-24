@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
 using System.Collections;
 
 /// <summary>
@@ -41,7 +42,7 @@ public class CinematicCombatEffects : MonoBehaviour
     void Update()
     {
         // Immediate gamejam juice: light shake on every mouse click (sword swing)
-        if (testEffectsOnLeftClick && Input.GetMouseButtonDown(0))
+        if (testEffectsOnLeftClick && Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame)
         {
             TriggerLightSwing();
         }

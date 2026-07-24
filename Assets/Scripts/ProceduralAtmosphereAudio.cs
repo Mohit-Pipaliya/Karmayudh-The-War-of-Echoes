@@ -17,6 +17,10 @@ public class ProceduralAtmosphereAudio : MonoBehaviour
     private float phase3;
     private float sampleRate;
     private float lfoPhase;
+    
+    // Use System.Random because OnAudioFilterRead runs on a separate audio thread.
+    // UnityEngine.Random can only be used on the main thread.
+    private System.Random sysRandom = new System.Random();
 
     void Start()
     {
@@ -60,7 +64,7 @@ public class ProceduralAtmosphereAudio : MonoBehaviour
             float wave3 = Mathf.Sin(phase3) * 0.8f;
 
             // 3. Generate low-level dark noise (wind/rumble)
-            float noise = Random.Range(-1f, 1f) * 0.05f;
+            float noise = (float)(sysRandom.NextDouble() * 2.0 - 1.0) * 0.05f;
 
             // 4. Modulate with slow LFO for "breathing" effect
             float lfo = (Mathf.Sin(lfoPhase) * 0.5f) + 0.5f; // Range 0 to 1

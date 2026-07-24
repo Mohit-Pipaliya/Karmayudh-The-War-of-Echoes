@@ -57,6 +57,14 @@ public class PlayerController : MonoBehaviour
     private int slashComboStep = 0;
     private float lastAttackTime = 0f;
 
+    [Header("Checkpoint System")]
+    [HideInInspector] public static Vector3 lastCheckpointPosition = Vector3.zero;
+    [HideInInspector] public static Quaternion lastCheckpointRotation = Quaternion.identity;
+    [HideInInspector] public static bool hasCheckpoint = false;
+
+    private float originalHeight = 2.0f;
+    private Vector3 originalCenter = new Vector3(0, 1.0f, 0);
+
     void Start()
     {
         currentHealth = maxHealth;
@@ -84,6 +92,27 @@ public class PlayerController : MonoBehaviour
         }
 
         renderers = GetComponentsInChildren<Renderer>();
+        
+        // Checkpoint initialization & respawn setup
+        if (hasCheckpoint)
+        {
+            if (controller != null) controller.enabled = false;
+            transform.position = lastCheckpointPosition;
+            transform.rotation = lastCheckpointRotation;
+            if (controller != null) controller.enabled = true;
+        }
+        else
+        {
+            lastCheckpointPosition = transform.position;
+            lastCheckpointRotation = transform.rotation;
+            hasCheckpoint = true;
+        }
+
+        if (controller != null)
+        {
+            originalHeight = controller.height;
+            originalCenter = controller.center;
+        }
     }
 
     void Update()
@@ -407,22 +436,66 @@ public class PlayerController : MonoBehaviour
         isDead = true;
         
         animator.SetTrigger("Die");
-        // Force the animation to play immediately to bypass Animator transition bugs
         animator.Play("Die", 0, 0f);
         
-        // Prevent falling through the floor if a Rigidbody was accidentally added
         Rigidbody rb = GetComponent<Rigidbody>();
         if (rb != null)
         {
             rb.isKinematic = true;
         }
 
-        // Shrink the capsule so the character drops and rests perfectly on the ground
         if (controller != null)
         {
             controller.height = 0.2f;
             controller.center = new Vector3(0, 0.1f, 0);
         }
+
+        // Wait for animation to play before freezing game and showing Game Over
+        StartCoroutine(ShowGameOverAfterDelay(2f));
+    }
+
+    private IEnumerator ShowGameOverAfterDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay);
+        UIManager uiManager = FindObjectOfType<UIManager>();
+        if (uiManager != null)
+        {
+            uiManager.PlayerDied();
+        }
+    }
+
+    public void Respawn()
+    {
+        isDead = false;
+        
+        // Reset states that might get stuck
+        isDodging = false;
+        isInvincible = false;
+        isFrozen = false;
+        verticalVelocity = -2f;
+        
+        // Restore collider
+        if (controller != null)
+        {
+            controller.enabled = false; // Disable temporarily to teleport
+            controller.height = originalHeight;
+            controller.center = originalCenter;
+            
+            transform.position = lastCheckpointPosition;
+            transform.rotation = lastCheckpointRotation;
+            
+            controller.enabled = true;
+        }
+
+        Rigidbody rb = GetComponent<Rigidbody>();
+        if (rb != null) rb.isKinematic = false;
+
+        // Reset animator to default entry state (Idle)
+        animator.Rebind();
+        animator.Update(0f);
+        animator.SetFloat("Speed", 0f);
+
+        HealFull();
     }
 
     public void HealFull()

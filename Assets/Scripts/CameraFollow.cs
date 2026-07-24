@@ -27,8 +27,7 @@ public class CameraFollow : MonoBehaviour
 
     void Start()
     {
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
+        // Cursor lock logic is now handled by UIManager
     }
 
     void LateUpdate()
@@ -48,21 +47,34 @@ public class CameraFollow : MonoBehaviour
 
     void HandleNormalCamera()
     {
-        if (Mouse.current != null)
+        // Jab cursor lock ho, tabhi mouse se camera ghumana hai (taki Main Menu me cursor hilanese camera na ghume)
+        if (Mouse.current != null && Cursor.lockState == CursorLockMode.Locked)
         {
             currentX += Mouse.current.delta.x.ReadValue() * sensitivityX * Time.unscaledDeltaTime;
         }
 
         Quaternion rotation = Quaternion.Euler(fixedAngleY, currentX, 0);
-        Vector3 position = target.position + Vector3.up * heightOffset - (rotation * Vector3.forward * distance);
+        Vector3 targetPos = target.position + Vector3.up * heightOffset;
+        Vector3 desiredPosition = targetPos - (rotation * Vector3.forward * distance);
+
+        // Camera Collision - taki camera deewar ke andar na ghuse
+        RaycastHit hit;
+        if (Physics.Linecast(targetPos, desiredPosition, out hit))
+        {
+            // Player ya kisi trigger (jaise check point) se collide nahi karna chahiye
+            if (!hit.collider.CompareTag("Player") && !hit.collider.isTrigger)
+            {
+                desiredPosition = hit.point + (rotation * Vector3.forward * 0.1f);
+            }
+        }
 
         if (shakeDuration > 0)
         {
-            position += Random.insideUnitSphere * shakeMagnitude;
+            desiredPosition += Random.insideUnitSphere * shakeMagnitude;
             shakeDuration -= Time.unscaledDeltaTime; 
         }
 
-        transform.position = position;
+        transform.position = desiredPosition;
         transform.rotation = rotation;
     }
 
