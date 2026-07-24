@@ -42,6 +42,15 @@ public class EnemyAI : MonoBehaviour
     private EnemyHealthBar healthBar;
     private Renderer[] renderers;
 
+    [Header("Sound Effects")]
+    public AudioClip[] footstepSounds;
+    public AudioClip[] attackSounds;
+    public AudioClip[] damageSounds;
+    public AudioClip deathSound;
+    public AudioClip growlSound;
+    private float footstepTimer = 0f;
+    private float growlTimer = 0f;
+
     void Start()
     {
         controller = GetComponent<CharacterController>();
@@ -81,6 +90,28 @@ public class EnemyAI : MonoBehaviour
         if (controller != null && controller.enabled)
         {
             ApplyGravity();
+        }
+
+        // Random growl sound logic
+        if (currentState != EnemyState.Dead && audioSource != null && growlSound != null)
+        {
+            growlTimer -= Time.deltaTime;
+            if (growlTimer <= 0)
+            {
+                audioSource.PlayOneShot(growlSound, 0.4f);
+                growlTimer = Random.Range(5f, 15f);
+            }
+        }
+        
+        // Footstep logic
+        if (currentState == EnemyState.Chasing && footstepSounds != null && footstepSounds.Length > 0)
+        {
+            footstepTimer -= Time.deltaTime;
+            if (footstepTimer <= 0)
+            {
+                audioSource.PlayOneShot(footstepSounds[Random.Range(0, footstepSounds.Length)], 0.3f);
+                footstepTimer = 0.5f; // Hardcode time between steps while running
+            }
         }
 
         if (currentState == EnemyState.Dead)
@@ -327,6 +358,11 @@ public class EnemyAI : MonoBehaviour
             animator.SetTrigger("SwordAttack");
         }
 
+        if (audioSource != null && attackSounds != null && attackSounds.Length > 0)
+        {
+            audioSource.PlayOneShot(attackSounds[Random.Range(0, attackSounds.Length)], 0.6f);
+        }
+
         yield return new WaitForSeconds(attackCooldown);
 
         isAttackCoolingDown = false;
@@ -353,6 +389,10 @@ public class EnemyAI : MonoBehaviour
         else
         {
             animator.SetTrigger("TakeDamage");
+            if (audioSource != null && damageSounds != null && damageSounds.Length > 0)
+            {
+                audioSource.PlayOneShot(damageSounds[Random.Range(0, damageSounds.Length)], 0.7f);
+            }
         }
     }
 
@@ -386,6 +426,11 @@ public class EnemyAI : MonoBehaviour
     {
         currentState = EnemyState.Dead;
         animator.SetTrigger("Die"); 
+        
+        if (audioSource != null && deathSound != null)
+        {
+            audioSource.PlayOneShot(deathSound, 1.0f);
+        }
         
         if (healthBar != null)
         {

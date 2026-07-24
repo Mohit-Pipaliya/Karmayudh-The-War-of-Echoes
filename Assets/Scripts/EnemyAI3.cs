@@ -40,6 +40,15 @@ public class EnemyAI3 : MonoBehaviour
     private EnemyHealthBar healthBar;
     private Renderer[] renderers;
 
+    [Header("Sound Effects")]
+    public AudioClip[] footstepSounds;
+    public AudioClip[] attackSounds;
+    public AudioClip[] damageSounds;
+    public AudioClip deathSound;
+    public AudioClip growlSound;
+    private float footstepTimer = 0f;
+    private float growlTimer = 0f;
+
     void Start()
     {
         controller = GetComponent<CharacterController>();
@@ -80,6 +89,28 @@ public class EnemyAI3 : MonoBehaviour
 
         if (currentState == EnemyState.Dead)
             return; 
+
+        // Random growl sound logic
+        if (audioSource != null && growlSound != null)
+        {
+            growlTimer -= Time.deltaTime;
+            if (growlTimer <= 0)
+            {
+                audioSource.PlayOneShot(growlSound, 0.4f);
+                growlTimer = Random.Range(5f, 15f);
+            }
+        }
+        
+        // Footstep logic
+        if (currentState == EnemyState.Chasing && footstepSounds != null && footstepSounds.Length > 0)
+        {
+            footstepTimer -= Time.deltaTime;
+            if (footstepTimer <= 0)
+            {
+                audioSource.PlayOneShot(footstepSounds[Random.Range(0, footstepSounds.Length)], 0.3f);
+                footstepTimer = 0.5f; // Hardcode time between steps while running
+            }
+        }
 
         if (player == null) return;
 
@@ -323,6 +354,11 @@ public class EnemyAI3 : MonoBehaviour
             animator.SetTrigger("SwordAttack");
         }
 
+        if (audioSource != null && attackSounds != null && attackSounds.Length > 0)
+        {
+            audioSource.PlayOneShot(attackSounds[Random.Range(0, attackSounds.Length)], 0.6f);
+        }
+
         // Ek extra attack (Combo)
         yield return new WaitForSeconds(0.6f);
 
@@ -338,15 +374,30 @@ public class EnemyAI3 : MonoBehaviour
             animator.SetTrigger("SwordAttack");
         }
 
+        if (audioSource != null && attackSounds != null && attackSounds.Length > 0)
+        {
+            audioSource.PlayOneShot(attackSounds[Random.Range(0, attackSounds.Length)], 0.6f);
+        }
+
         // Teesra Attack: Ek extra Sword Attack
         yield return new WaitForSeconds(0.6f);
         animator.SetInteger("AttackType", Random.Range(1, 4));
         animator.SetTrigger("SwordAttack");
+        
+        if (audioSource != null && attackSounds != null && attackSounds.Length > 0)
+        {
+            audioSource.PlayOneShot(attackSounds[Random.Range(0, attackSounds.Length)], 0.6f);
+        }
 
         // Chautha Attack: Ek extra Slash Attack
         yield return new WaitForSeconds(0.6f);
         animator.SetInteger("AttackType", Random.Range(1, 3));
         animator.SetTrigger("SlashAttack");
+        
+        if (audioSource != null && attackSounds != null && attackSounds.Length > 0)
+        {
+            audioSource.PlayOneShot(attackSounds[Random.Range(0, attackSounds.Length)], 0.6f);
+        }
 
         yield return new WaitForSeconds(attackCooldown);
 
@@ -374,6 +425,10 @@ public class EnemyAI3 : MonoBehaviour
         else
         {
             animator.SetTrigger("TakeDamage");
+            if (audioSource != null && damageSounds != null && damageSounds.Length > 0)
+            {
+                audioSource.PlayOneShot(damageSounds[Random.Range(0, damageSounds.Length)], 0.7f);
+            }
         }
     }
 
@@ -407,6 +462,11 @@ public class EnemyAI3 : MonoBehaviour
     {
         currentState = EnemyState.Dead;
         animator.SetTrigger("Die"); 
+        
+        if (audioSource != null && deathSound != null)
+        {
+            audioSource.PlayOneShot(deathSound, 1.0f);
+        }
         
         if (healthBar != null)
         {

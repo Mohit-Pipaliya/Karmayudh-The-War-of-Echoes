@@ -31,6 +31,16 @@ public class PlayerController : MonoBehaviour
     public AudioSource playerAudio; 
     [Tooltip("Add reply audios here. e.g., 0 = Soul Shivraj, 1 = Physical Shivraj")]
     public AudioClip[] enemyReplies;
+    
+    [Header("Sound Effects")]
+    public AudioClip[] footstepSounds;
+    public AudioClip jumpSound;
+    public AudioClip[] landingSounds;
+    public AudioClip[] attackSounds;
+    public AudioClip[] damageSounds;
+    public AudioClip deathSound;
+    private float footstepTimer = 0f;
+    private bool wasGrounded = true;
 
     private CharacterController controller;
     private Animator animator;
@@ -112,6 +122,15 @@ public class PlayerController : MonoBehaviour
         {
             originalHeight = controller.height;
             originalCenter = controller.center;
+        }
+
+        if (playerAudio == null)
+        {
+            playerAudio = GetComponent<AudioSource>();
+            if (playerAudio == null)
+            {
+                playerAudio = gameObject.AddComponent<AudioSource>();
+            }
         }
     }
 
@@ -254,6 +273,16 @@ public class PlayerController : MonoBehaviour
 
         if (controller.isGrounded)
         {
+            if (!wasGrounded)
+            {
+                // Landed
+                wasGrounded = true;
+                if (playerAudio != null && landingSounds != null && landingSounds.Length > 0)
+                {
+                    playerAudio.PlayOneShot(landingSounds[Random.Range(0, landingSounds.Length)], 0.5f);
+                }
+            }
+
             verticalVelocity = -5f; 
 
             if (!isAttacking && jumpPressed)
@@ -261,11 +290,35 @@ public class PlayerController : MonoBehaviour
                 verticalVelocity = jumpSpeed;
                 animator.SetTrigger("Jump");
                 
+                if (playerAudio != null && jumpSound != null)
+                {
+                    playerAudio.PlayOneShot(jumpSound, 0.7f);
+                }
+                
                 if(cameraFollowScript != null) cameraFollowScript.TriggerShake(0.1f, 0.05f);
+            }
+            
+            // Footsteps logic
+            if (moveDirection.magnitude > 0.1f && !isAttacking && !isDodging)
+            {
+                footstepTimer -= Time.unscaledDeltaTime;
+                if (footstepTimer <= 0f)
+                {
+                    if (playerAudio != null && footstepSounds != null && footstepSounds.Length > 0)
+                    {
+                        playerAudio.PlayOneShot(footstepSounds[Random.Range(0, footstepSounds.Length)], 0.3f);
+                    }
+                    footstepTimer = isRunning ? 0.35f : 0.6f;
+                }
+            }
+            else
+            {
+                footstepTimer = 0f;
             }
         }
         else
         {
+            wasGrounded = false;
             verticalVelocity -= gravity * Time.unscaledDeltaTime;
         }
 
@@ -310,6 +363,11 @@ public class PlayerController : MonoBehaviour
                 animator.SetTrigger("SlashAttack");
                 lastAttackTime = Time.time;
                 
+                if (playerAudio != null && attackSounds != null && attackSounds.Length > 0)
+                {
+                    playerAudio.PlayOneShot(attackSounds[Random.Range(0, attackSounds.Length)], 0.6f);
+                }
+                
                 StartCoroutine(CinematicSlowMo(0.3f, 0.2f)); 
                 if(cameraFollowScript != null) cameraFollowScript.TriggerShake(0.2f, 0.1f);
             }
@@ -322,6 +380,11 @@ public class PlayerController : MonoBehaviour
                 animator.SetInteger("AttackType", comboStep);
                 animator.SetTrigger("SwordAttack");
                 lastAttackTime = Time.time;
+
+                if (playerAudio != null && attackSounds != null && attackSounds.Length > 0)
+                {
+                    playerAudio.PlayOneShot(attackSounds[Random.Range(0, attackSounds.Length)], 0.5f);
+                }
 
                 if (comboStep == 3)
                 {
@@ -424,6 +487,12 @@ public class PlayerController : MonoBehaviour
         else
         {
             animator.SetTrigger("TakeDamage");
+            
+            if (playerAudio != null && damageSounds != null && damageSounds.Length > 0)
+            {
+                playerAudio.PlayOneShot(damageSounds[Random.Range(0, damageSounds.Length)], 0.7f);
+            }
+            
             StartCoroutine(DamageFlashRoutine());
             StartCoroutine(CinematicSlowMo(0.05f, 0.2f));
             if(cameraFollowScript != null) cameraFollowScript.TriggerShake(0.3f, 0.3f);
@@ -434,6 +503,11 @@ public class PlayerController : MonoBehaviour
     {
         if (isDead) return;
         isDead = true;
+        
+        if (playerAudio != null && deathSound != null)
+        {
+            playerAudio.PlayOneShot(deathSound, 1.0f);
+        }
         
         animator.SetTrigger("Die");
         animator.Play("Die", 0, 0f);
