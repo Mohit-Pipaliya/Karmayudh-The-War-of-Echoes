@@ -330,8 +330,15 @@ public class AdvancedGateTeleport : MonoBehaviour
         col.color = grad;
 
         ParticleSystemRenderer corePsr = corePs.GetComponent<ParticleSystemRenderer>();
-        corePsr.material = new Material(Shader.Find("Particles/Standard Unlit"));
-        corePsr.material.color = magicGlowColor * 2.5f; // HDR GLOW
+        Shader validShader = GetValidParticleShader();
+        if (validShader != null)
+        {
+            corePsr.material = new Material(validShader);
+            if (corePsr.material.HasProperty("_BaseColor"))
+                corePsr.material.SetColor("_BaseColor", magicGlowColor * 2.5f);
+            else if (corePsr.material.HasProperty("_Color"))
+                corePsr.material.SetColor("_Color", magicGlowColor * 2.5f);
+        }
 
         // --- 2. SPARKS (Doctor Strange style flying embers) ---
         GameObject sparksObj = new GameObject("PortalSparks");
@@ -374,7 +381,11 @@ public class AdvancedGateTeleport : MonoBehaviour
         sCol.color = sGrad;
         
         ParticleSystemRenderer sPsr = sparksPs.GetComponent<ParticleSystemRenderer>();
-        sPsr.material = new Material(Shader.Find("Particles/Standard Unlit"));
+        Shader sparkShader = GetValidParticleShader();
+        if (sparkShader != null)
+        {
+            sPsr.material = new Material(sparkShader);
+        }
         sPsr.material.color = new Color(2f, 1.5f, 0.5f); // SUPER BRIGHT HDR
         sPsr.trailMaterial = sPsr.material;
         
@@ -460,6 +471,7 @@ public class AdvancedGateTeleport : MonoBehaviour
         {
             originalKinematic = _rb.isKinematic;
             _rb.isKinematic = true;
+            _rb.linearVelocity = Vector3.zero;
         }
         if (_nma != null) _nma.enabled = false;
     }
@@ -486,6 +498,21 @@ public class AdvancedGateTeleport : MonoBehaviour
             anim.SetBool("Grounded", true);
             anim.SetBool("FreeFall", false);
         }
+    }
+
+    private Shader GetValidParticleShader()
+    {
+        Shader s = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+        if (s != null) return s;
+        
+        s = Shader.Find("Particles/Standard Unlit");
+        if (s != null) return s;
+        
+        s = Shader.Find("Legacy Shaders/Particles/Additive");
+        if (s != null) return s;
+
+        s = Shader.Find("Mobile/Particles/Additive");
+        return s;
     }
 
     #endregion

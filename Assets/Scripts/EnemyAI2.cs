@@ -258,6 +258,7 @@ public class EnemyAI2 : MonoBehaviour
 
     void EndCutscene()
     {
+        if (WorldEnvironmentManager.Instance != null) WorldEnvironmentManager.Instance.RemoveBGMSuppression();
         currentState = EnemyState.Chasing;
         
         // --- CUTSCENE KHATAM ---
@@ -408,6 +409,11 @@ public class EnemyAI2 : MonoBehaviour
                 audioSource.PlayOneShot(damageSounds[Random.Range(0, damageSounds.Length)], 0.7f);
             }
         }
+    }
+
+    public bool IsAttacking()
+    {
+        return currentState == EnemyState.Attacking;
     }
 
     IEnumerator HitPause()

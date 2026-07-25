@@ -192,7 +192,7 @@ public class WorldEnvironmentManager : MonoBehaviour
             if (bgmSource.clip != targetBGMClip)
             {
                 // Fade out current clip before switching
-                bgmSource.volume -= Time.deltaTime * transitionSpeed;
+                bgmSource.volume = Mathf.Max(0f, bgmSource.volume - Time.deltaTime * transitionSpeed);
                 if (bgmSource.volume <= 0.01f)
                 {
                     bgmSource.clip = targetBGMClip;
@@ -204,6 +204,12 @@ public class WorldEnvironmentManager : MonoBehaviour
                 // If suppressed (cutscene/fight), fade to 0. Otherwise fade to max volume.
                 float targetVol = (bgmSuppressionCount > 0 || targetBGMClip == null) ? 0f : bgmMaxVolume;
                 bgmSource.volume = Mathf.MoveTowards(bgmSource.volume, targetVol, Time.deltaTime * transitionSpeed);
+
+                // Failsafe: if it's supposed to be playing but isn't, force it to play
+                if (targetBGMClip != null && targetVol > 0f && !bgmSource.isPlaying)
+                {
+                    bgmSource.Play();
+                }
             }
         }
     }

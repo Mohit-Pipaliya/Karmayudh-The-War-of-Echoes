@@ -399,6 +399,11 @@ public class EnemyAI : MonoBehaviour
         }
     }
 
+    public bool IsAttacking()
+    {
+        return currentState == EnemyState.Attacking;
+    }
+
     IEnumerator HitPause()
     {
         animator.speed = 0.1f;

@@ -91,21 +91,40 @@ public class AAA_EnvironmentEffects : MonoBehaviour
         noise.strength = 0.2f;
         noise.frequency = 0.5f;
 
-        // Set rendering material to default particle
+        // Set rendering material to default particle safely
         ParticleSystemRenderer renderer = particleObj.GetComponent<ParticleSystemRenderer>();
-        renderer.material = new Material(Shader.Find("Particles/Standard Unlit"));
-        renderer.material.SetFloat("_Mode", 2); // Fade mode
-        renderer.material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
-        renderer.material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
-        renderer.material.SetInt("_ZWrite", 0);
-        renderer.material.DisableKeyword("_ALPHATEST_ON");
-        renderer.material.EnableKeyword("_ALPHABLEND_ON");
-        renderer.material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
-        renderer.material.renderQueue = 3000;
+        Shader s = GetValidParticleShader();
+        if (s != null)
+        {
+            renderer.material = new Material(s);
+            if (renderer.material.HasProperty("_Mode")) renderer.material.SetFloat("_Mode", 2); // Fade mode
+            if (renderer.material.HasProperty("_SrcBlend")) renderer.material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            if (renderer.material.HasProperty("_DstBlend")) renderer.material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            if (renderer.material.HasProperty("_ZWrite")) renderer.material.SetInt("_ZWrite", 0);
+            renderer.material.DisableKeyword("_ALPHATEST_ON");
+            renderer.material.EnableKeyword("_ALPHABLEND_ON");
+            renderer.material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            renderer.material.renderQueue = 3000;
+        }
         
         // Add particle system to play
         ps.Play();
         
         Debug.Log("AAA Atmospheric Dust Setup Complete!");
+    }
+
+    private Shader GetValidParticleShader()
+    {
+        Shader s = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+        if (s != null) return s;
+        
+        s = Shader.Find("Particles/Standard Unlit");
+        if (s != null) return s;
+        
+        s = Shader.Find("Legacy Shaders/Particles/Additive");
+        if (s != null) return s;
+
+        s = Shader.Find("Mobile/Particles/Additive");
+        return s;
     }
 }

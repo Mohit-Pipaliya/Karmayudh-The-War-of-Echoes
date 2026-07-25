@@ -28,7 +28,6 @@ public class EnemyWeaponDamage : MonoBehaviour
 
     void OnTriggerEnter(Collider other)
     {
-        // Check if the enemy is currently in an Attack animation state
         bool isAttacking = false;
         if (enemyAnimator != null)
         {
@@ -36,6 +35,26 @@ public class EnemyWeaponDamage : MonoBehaviour
             if (stateInfo.IsTag("Attack") || stateInfo.IsName("Attack") || stateInfo.IsName("SwordAttack") || stateInfo.IsName("SlashAttack"))
             {
                 isAttacking = true;
+            }
+        }
+
+        // Fallback for EnemyAI3 (or others) where animation state names might not match exactly
+        if (!isAttacking)
+        {
+            EnemyAI3 ai3 = GetComponentInParent<EnemyAI3>();
+            if (ai3 != null && ai3.IsAttacking())
+            {
+                isAttacking = true;
+            }
+            else
+            {
+                EnemyAI2 ai2 = GetComponentInParent<EnemyAI2>();
+                if (ai2 != null && ai2.IsAttacking()) isAttacking = true;
+                else
+                {
+                    EnemyAI ai1 = GetComponentInParent<EnemyAI>();
+                    if (ai1 != null && ai1.IsAttacking()) isAttacking = true;
+                }
             }
         }
 

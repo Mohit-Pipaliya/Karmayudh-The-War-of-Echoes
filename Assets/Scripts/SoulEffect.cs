@@ -7,51 +7,43 @@ public class SoulEffect : MonoBehaviour
     public float pulseSpeed = 1.5f;
     public float pulseIntensity = 0.5f;
 
-    private Material soulMaterial;
+    private Material[] soulMaterials;
 
     void Start()
     {
-        // 1. Create a highly glowing material (URP Compatible)
-        Shader soulShader = Shader.Find("Universal Render Pipeline/Unlit");
-        if (soulShader == null) soulShader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-        if (soulShader == null) soulShader = Shader.Find("Legacy Shaders/Particles/Additive");
-        if (soulShader == null) soulShader = Shader.Find("Sprites/Default");
-
-        soulMaterial = new Material(soulShader);
-        
-        // For URP Unlit, color is _BaseColor
-        if (soulMaterial.HasProperty("_BaseColor"))
-            soulMaterial.SetColor("_BaseColor", soulColor);
-        else if (soulMaterial.HasProperty("_Color"))
-            soulMaterial.SetColor("_Color", soulColor);
-        else if (soulMaterial.HasProperty("_TintColor"))
-            soulMaterial.SetColor("_TintColor", soulColor);
-
-        // Try to enable strong emission
-        soulMaterial.EnableKeyword("_EMISSION");
-        if (soulMaterial.HasProperty("_EmissionColor"))
-        {
-            soulMaterial.SetColor("_EmissionColor", soulColor * 2.0f);
-        }
-
-        // Make it semi-transparent if possible in URP
-        soulMaterial.SetFloat("_Surface", 1); // 1 = Transparent
-        soulMaterial.SetFloat("_Blend", 0); // 0 = Alpha
-        soulMaterial.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
-
-        // 2. Apply this material to ALL meshes on the enemy
+        // 1. Get all renderers on the enemy
         Renderer[] renderers = GetComponentsInChildren<Renderer>();
+        System.Collections.Generic.List<Material> matList = new System.Collections.Generic.List<Material>();
+
         foreach (Renderer r in renderers)
         {
             if (r is ParticleSystemRenderer) continue;
 
+            // 2. Clone the existing materials so we don't affect the original prefab/assets
             Material[] newMats = new Material[r.materials.Length];
             for (int i = 0; i < newMats.Length; i++)
             {
-                newMats[i] = soulMaterial;
+                newMats[i] = new Material(r.materials[i]);
+                
+                // Modify the material to look like a glowing soul
+                if (newMats[i].HasProperty("_BaseColor"))
+                    newMats[i].SetColor("_BaseColor", soulColor);
+                else if (newMats[i].HasProperty("_Color"))
+                    newMats[i].SetColor("_Color", soulColor);
+                
+                // Enable emission for the glow effect
+                newMats[i].EnableKeyword("_EMISSION");
+                if (newMats[i].HasProperty("_EmissionColor"))
+                {
+                    newMats[i].SetColor("_EmissionColor", soulColor * 2.0f);
+                }
+
+                matList.Add(newMats[i]);
             }
             r.materials = newMats;
         }
+
+        soulMaterials = matList.ToArray();
 
         // 3. Add a realistic floating particle aura
         AddRealisticSoulParticles();
@@ -118,25 +110,39 @@ public class SoulEffect : MonoBehaviour
 
         // Renderer
         ParticleSystemRenderer psr = particlesObj.GetComponent<ParticleSystemRenderer>();
-        psr.material = soulMaterial;
+        
+        // Try to use a default particle material if available, otherwise just use standard
+        Material particleMat = new Material(Shader.Find("Universal Render Pipeline/Particles/Unlit"));
+        if(particleMat.shader.name == "Hidden/InternalErrorShader") 
+            particleMat = new Material(Shader.Find("Particles/Standard Unlit"));
+            
+        particleMat.SetColor("_BaseColor", soulColor);
+        particleMat.SetColor("_TintColor", soulColor);
+        psr.material = particleMat;
         psr.renderMode = ParticleSystemRenderMode.Billboard;
     }
 
     void Update()
     {
         // 4. Pulse the brightness of the soul material over time
-        if (soulMaterial != null)
+        if (soulMaterials != null && soulMaterials.Length > 0)
         {
             float pulse = 1f + Mathf.PingPong(Time.time * pulseSpeed, pulseIntensity);
             Color currentColor = soulColor * pulse;
             
-            if (soulMaterial.HasProperty("_BaseColor"))
-                soulMaterial.SetColor("_BaseColor", currentColor);
-            else if (soulMaterial.HasProperty("_TintColor"))
-                soulMaterial.SetColor("_TintColor", currentColor);
-                
-            if (soulMaterial.HasProperty("_EmissionColor"))
-                soulMaterial.SetColor("_EmissionColor", currentColor * 2.0f);
+            foreach (Material mat in soulMaterials)
+            {
+                if (mat != null)
+                {
+                    if (mat.HasProperty("_BaseColor"))
+                        mat.SetColor("_BaseColor", currentColor);
+                    else if (mat.HasProperty("_Color"))
+                        mat.SetColor("_Color", currentColor);
+                        
+                    if (mat.HasProperty("_EmissionColor"))
+                        mat.SetColor("_EmissionColor", currentColor * 2.0f);
+                }
+            }
         }
     }
 }
