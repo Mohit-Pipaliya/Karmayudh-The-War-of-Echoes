@@ -467,7 +467,15 @@ public class EnemyAI3 : MonoBehaviour
     {
         currentState = EnemyState.Dead;
         animator.speed = 1f; // Force normal speed
+        
+        // Reset any pending triggers that might interfere with the Die transition
+        animator.ResetTrigger("TakeDamage");
+        animator.ResetTrigger("SlashAttack");
+        animator.ResetTrigger("SwordAttack");
+        
+        // Use SetTrigger, and also try Play as a forceful fallback
         animator.SetTrigger("Die"); 
+        try { animator.Play("Die", 0, 0f); } catch {}
         
         if (audioSource != null && deathSound != null)
         {
