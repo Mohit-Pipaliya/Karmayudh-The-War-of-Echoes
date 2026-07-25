@@ -22,6 +22,11 @@ public class UIManager : MonoBehaviour
     [Header("Settings")]
     public float loadingTime = 3f; // Fake loading time
 
+    [Header("Game Start Settings")]
+    public Transform gameStartPosition; // Position where the player starts when clicking Play
+
+    private bool isRespawningCall = false; // Tracks if PlayGame is called from a respawn
+
     private bool isPaused = false;
     private bool isGameOver = false;
     private bool isFinished = false;
@@ -47,13 +52,17 @@ public class UIManager : MonoBehaviour
         {
             // If we are respawning from a checkpoint, skip the main menu and go straight to game
             isRespawning = false;
+            isRespawningCall = true;
             PlayGame();
+            isRespawningCall = false;
         }
         else
         {
             // Initial setup: Show Loading Screen
             ShowPanel(loadingPanel);
             if (healthBarPanel != null) healthBarPanel.SetActive(false);
+            
+            Time.timeScale = 0f; // Freeze the game in the background while in menus
             
             StartCoroutine(SimulateLoading());
         }
@@ -108,7 +117,7 @@ public class UIManager : MonoBehaviour
         float timer = 0f;
         while (timer < loadingTime)
         {
-            timer += Time.deltaTime;
+            timer += Time.unscaledDeltaTime; // Use unscaledDeltaTime because timeScale is 0
             if (loadingSlider != null)
             {
                 loadingSlider.value = timer / loadingTime;
@@ -186,6 +195,27 @@ public class UIManager : MonoBehaviour
         isPaused = false;
         isGameOver = false;
         isFinished = false;
+
+        // Teleport player to start position only if this is the initial play (not a respawn)
+        if (!isRespawningCall && gameStartPosition != null)
+        {
+            PlayerController pc = FindObjectOfType<PlayerController>();
+            if (pc != null)
+            {
+                CharacterController cc = pc.GetComponent<CharacterController>();
+                if (cc != null) cc.enabled = false;
+                
+                pc.transform.position = gameStartPosition.position;
+                pc.transform.rotation = gameStartPosition.rotation;
+                
+                if (cc != null) cc.enabled = true;
+                
+                // Set the initial checkpoint to this starting position
+                PlayerController.lastCheckpointPosition = gameStartPosition.position;
+                PlayerController.lastCheckpointRotation = gameStartPosition.rotation;
+                PlayerController.hasCheckpoint = true;
+            }
+        }
     }
 
     public void OpenOptionFromMainMenu()

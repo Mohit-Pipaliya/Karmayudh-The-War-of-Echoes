@@ -444,6 +444,17 @@ public class EnemyAI2 : MonoBehaviour
 
     void Die()
     {
+        StopAllCoroutines(); // Stop any pending attacks in AttackRoutine that might override the Die animation
+        
+        // Reset damage flash color just in case it was interrupted
+        if (renderers != null)
+        {
+            foreach (Renderer r in renderers)
+            {
+                if (r != null) r.SetPropertyBlock(null);
+            }
+        }
+
         currentState = EnemyState.Dead;
         animator.speed = 1f; // Force normal speed
         
