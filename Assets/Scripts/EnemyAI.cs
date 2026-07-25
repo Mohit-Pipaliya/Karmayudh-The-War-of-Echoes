@@ -382,7 +382,6 @@ public class EnemyAI : MonoBehaviour
             healthBar.UpdateHealth(currentHealth, maxHealth);
         }
         
-        StartCoroutine(HitPause());
         StartCoroutine(DamageFlashRoutine());
 
         if (currentHealth <= 0)
@@ -391,6 +390,7 @@ public class EnemyAI : MonoBehaviour
         }
         else
         {
+            StartCoroutine(HitPause());
             animator.SetTrigger("TakeDamage");
             if (audioSource != null && damageSounds != null && damageSounds.Length > 0)
             {
@@ -433,6 +433,7 @@ public class EnemyAI : MonoBehaviour
     void Die()
     {
         currentState = EnemyState.Dead;
+        animator.speed = 1f; // Force normal speed
         animator.SetTrigger("Die"); 
         
         if (audioSource != null && deathSound != null)
