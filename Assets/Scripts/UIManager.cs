@@ -14,10 +14,12 @@ public class UIManager : MonoBehaviour
     public GameObject gameOverPanel;
     public GameObject finishPanel;
     public GameObject healthBarPanel;
+    public GameObject informationPanel;
 
     [Header("UI Elements")]
     public Slider loadingSlider;
     public Slider volumeSlider;
+    public TMPro.TextMeshProUGUI janamText; // Assign the "Janam 1" text here in Inspector
 
     [Header("Settings")]
     public float loadingTime = 3f; // Fake loading time
@@ -137,6 +139,7 @@ public class UIManager : MonoBehaviour
         if (pauseMenuPanel != null && panelToShow != pauseMenuPanel) pauseMenuPanel.SetActive(false);
         if (gameOverPanel != null && panelToShow != gameOverPanel) gameOverPanel.SetActive(false);
         if (finishPanel != null && panelToShow != finishPanel) finishPanel.SetActive(false);
+        if (informationPanel != null && panelToShow != informationPanel) informationPanel.SetActive(false);
         // We don't hide healthBarPanel here because it stays on during gameplay, handled separately
 
         if (panelToShow != null)
@@ -190,7 +193,16 @@ public class UIManager : MonoBehaviour
     public void PlayGame()
     {
         ShowPanel(null); // Hide all main panels
-        if (healthBarPanel != null) healthBarPanel.SetActive(true);
+        
+        if (isRespawningCall)
+        {
+            if (healthBarPanel != null) healthBarPanel.SetActive(true);
+        }
+        else
+        {
+            if (healthBarPanel != null) healthBarPanel.SetActive(false);
+        }
+
         Time.timeScale = 1f;
         isPaused = false;
         isGameOver = false;
@@ -215,6 +227,37 @@ public class UIManager : MonoBehaviour
                 PlayerController.lastCheckpointRotation = gameStartPosition.rotation;
                 PlayerController.hasCheckpoint = true;
             }
+        }
+
+        // Show Information Panel for 5 seconds on Play
+        if (!isRespawningCall) 
+        {
+            StartCoroutine(ShowInformationPanelRoutine());
+        }
+    }
+
+    private IEnumerator ShowInformationPanelRoutine()
+    {
+        if (informationPanel != null)
+        {
+            informationPanel.SetActive(true);
+            
+            // Freeze player
+            PlayerController pc = FindObjectOfType<PlayerController>();
+            if (pc != null) pc.isFrozen = true;
+            
+            yield return new WaitForSeconds(10f);
+            
+            informationPanel.SetActive(false);
+            
+            // Unfreeze player and show health bar
+            if (pc != null) pc.isFrozen = false;
+            if (healthBarPanel != null) healthBarPanel.SetActive(true);
+        }
+        else
+        {
+            // If panel is not assigned, just show health bar immediately
+            if (healthBarPanel != null) healthBarPanel.SetActive(true);
         }
     }
 
@@ -308,5 +351,13 @@ public class UIManager : MonoBehaviour
         Time.timeScale = 0f;
         ShowPanel(finishPanel);
         if (healthBarPanel != null) healthBarPanel.SetActive(false);
+    }
+
+    public void UpdateJanamText(string newText)
+    {
+        if (janamText != null)
+        {
+            janamText.text = newText;
+        }
     }
 }
