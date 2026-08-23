@@ -609,4 +609,15 @@ public class PlayerController : MonoBehaviour
             interactUI.SetActive(show);
         }
     }
+
+    void OnControllerColliderHit(ControllerColliderHit hit)
+    {
+        // Check if the object the player touched has the FallingPlatform script (on itself or its parent)
+        FallingPlatform platform = hit.gameObject.GetComponentInParent<FallingPlatform>();
+        if (platform != null)
+        {
+            // Direct call to make the block fall
+            platform.TriggerFall();
+        }
+    }
 }

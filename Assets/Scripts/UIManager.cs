@@ -242,11 +242,12 @@ public class UIManager : MonoBehaviour
         {
             informationPanel.SetActive(true);
             
-            // Freeze player
+            // Freeze player (pehle jaisa)
             PlayerController pc = FindObjectOfType<PlayerController>();
             if (pc != null) pc.isFrozen = true;
             
-            yield return new WaitForSeconds(10f);
+            // 6 seconds ka wait
+            yield return new WaitForSeconds(6f);
             
             informationPanel.SetActive(false);
             
