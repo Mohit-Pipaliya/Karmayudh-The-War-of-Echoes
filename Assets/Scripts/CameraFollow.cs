@@ -76,16 +76,27 @@ public class CameraFollow : MonoBehaviour
         Vector3 targetPos = target.position + Vector3.up * heightOffset;
         Vector3 desiredPosition = targetPos - (rotation * Vector3.forward * distance);
 
-        // Camera Collision - taki camera deewar ke andar na ghuse
-        RaycastHit hit;
-        if (Physics.Linecast(targetPos, desiredPosition, out hit))
+        // Camera Collision - SphereCastAll taaki camera deewar ke andar clip na ho
+        float cameraRadius = 0.3f; // Camera ki motai (radius)
+        Vector3 direction = (desiredPosition - targetPos).normalized;
+        float closestDistance = distance;
+
+        RaycastHit[] hits = Physics.SphereCastAll(targetPos, cameraRadius, direction, distance);
+        
+        foreach (RaycastHit h in hits)
         {
-            // Player ya kisi trigger (jaise check point) se collide nahi karna chahiye
-            if (!hit.collider.CompareTag("Player") && !hit.collider.isTrigger)
+            // Player aur Triggers se camera na takraye
+            if (!h.collider.CompareTag("Player") && !h.collider.isTrigger)
             {
-                desiredPosition = hit.point + (rotation * Vector3.forward * 0.1f);
+                if (h.distance < closestDistance)
+                {
+                    closestDistance = h.distance;
+                }
             }
         }
+        
+        // Deewar milne par camera ko aage kar do
+        desiredPosition = targetPos + direction * closestDistance;
 
         if (shakeDuration > 0)
         {

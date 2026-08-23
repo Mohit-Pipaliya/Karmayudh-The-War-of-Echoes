@@ -61,8 +61,9 @@ public class EnemyHealthBar : MonoBehaviour
 
         // 1. Create Ring Center at the Enemy's feet
         ringCenter = new GameObject("GroundHealthRing");
-        ringCenter.transform.SetParent(this.transform, false);
-        ringCenter.transform.localPosition = new Vector3(0, 0.2f, 0); 
+        // IMPORTANT: Parent ko null rakh rahe hain taaki enemy ka bada scale (jaise 100x) ispe asar na kare
+        ringCenter.transform.SetParent(null); 
+        ringCenter.transform.position = transform.position + new Vector3(0, 0.2f, 0); 
         
         // Try to find a URP compatible unlit sprite shader
         Shader spriteShader = Shader.Find("Universal Render Pipeline/2D/Sprite-Lit-Default");
@@ -176,6 +177,15 @@ public class EnemyHealthBar : MonoBehaviour
         if (ringCenter != null)
         {
             ringCenter.gameObject.SetActive(false);
+        }
+    }
+
+    void OnDestroy()
+    {
+        // Jab enemy delete ho, toh uska health bar object bhi delete hona chahiye
+        if (ringCenter != null)
+        {
+            Destroy(ringCenter);
         }
     }
 }
